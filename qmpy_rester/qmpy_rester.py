@@ -60,12 +60,12 @@ class QMPYRester(object):
             url_args.append('filters='+filters_tag)
             
         if verbose:
-            print "Your filters are:"
+            print("Your filters are:")
             if url_args == []:
-                print "   No filters?"
+                print("   No filters?")
             else:
                 for arg in url_args:
-                    print "   ", arg
+                    print("   ", arg)
 
             ans = raw_input('Proceed? [Y/n]:')
 
@@ -109,12 +109,12 @@ class QMPYRester(object):
                 url_args.append('%s=%s' %(k, kwargs[k]))
 
         if verbose:
-            print "Your Entry filters are:"
+            print("Your Entry filters are:")
             if url_args == []:
-                print "   No filters?"
+                print("   No filters?")
             else:
                 for arg in url_args:
-                    print "   ", arg
+                    print("   ", arg)
 
             ans = raw_input('Proceed? [Y/n]:')
 
@@ -166,12 +166,12 @@ class QMPYRester(object):
                 url_args.append('%s=%s' %(k, kwargs[k]))
 
         if verbose:
-            print "Your Calculation filters are:"
+            print("Your Calculation filters are:")
             if url_args == []:
-                print "   No filters?"
+                print("   No filters?")
             else:
                 for arg in url_args:
-                    print "   ", arg
+                    print("   ", arg)
 
             ans = raw_input('Proceed? [Y/n]:')
 

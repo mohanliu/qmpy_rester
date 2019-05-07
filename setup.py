@@ -9,9 +9,9 @@ setup(name="qmpy_rester",
       license="LICENSE",
       packages=['qmpy_rester'],
       long_description=open('README.md').read(),
-      install_requires=[
-          "requests",
-          ],
+      test_suite='nose.collector',
+      tests_require=['nose'],
+      install_requires=["requests"],
       )
 
     

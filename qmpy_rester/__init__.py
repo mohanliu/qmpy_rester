@@ -1,1 +1,1 @@
-from qmpy_rester import *
+from .rester import QMPYRester

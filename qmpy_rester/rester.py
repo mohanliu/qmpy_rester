@@ -1,9 +1,9 @@
 import json
+import requests
 
 class QMPYRester(object):
     def __init__(self, endpoint='http://larue.northwestern.edu:9000/oqmdapi'):
         self.preamble = endpoint
-        import requests
         self.session = requests.Session()
 
     def __enter__(self):
@@ -67,7 +67,7 @@ class QMPYRester(object):
                 for arg in url_args:
                     print("   ", arg)
 
-            ans = raw_input('Proceed? [Y/n]:')
+            ans = input('Proceed? [Y/n]:')
 
             if ans not in ['Y', 'y', 'Yes', 'yes']:
                 return
@@ -116,7 +116,7 @@ class QMPYRester(object):
                 for arg in url_args:
                     print("   ", arg)
 
-            ans = raw_input('Proceed? [Y/n]:')
+            ans = input('Proceed? [Y/n]:')
 
             if ans not in ['Y', 'y', 'Yes', 'yes']:
                 return
@@ -173,7 +173,7 @@ class QMPYRester(object):
                 for arg in url_args:
                     print("   ", arg)
 
-            ans = raw_input('Proceed? [Y/n]:')
+            ans = input('Proceed? [Y/n]:')
 
             if ans not in ['Y', 'y', 'Yes', 'yes']:
                 return

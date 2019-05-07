@@ -11,7 +11,6 @@ setup(name="qmpy_rester",
       long_description=open('README.md').read(),
       install_requires=[
           "requests",
-          "json",
           ],
       )
 

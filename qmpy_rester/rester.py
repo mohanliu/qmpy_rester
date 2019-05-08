@@ -2,7 +2,7 @@ import json
 import requests
 
 class QMPYRester(object):
-    def __init__(self, endpoint='http://larue.northwestern.edu:9000/oqmdapi'):
+    def __init__(self, endpoint='http://larue.northwestern.edu:9000'):
         self.preamble = endpoint
         self.session = requests.Session()
 
@@ -34,16 +34,16 @@ class QMPYRester(object):
 
         # URL paramters
         url_args = []
-        kwargs_list = ['composition', 'icsd', 'filters',
+        kwargs_list = ['composition', 'icsd', 'filter',
                        'sort_by', 'desc', 'sort_offset',
                        'limit', 'offset']
 
         # Attributes for filters
         filter_args = []
-        filter_list = ['element_set', 'element',
+        filter_list = ['element_set', 'element', 'spacegroup'
                        'prototype', 'generic', 'volume',
                        'natoms', 'ntypes', 'stability',
-                       'delta_e', 'band_gap', 'filters']
+                       'delta_e', 'band_gap']
 
         for k in kwargs.keys():
             if k in kwargs_list:
@@ -57,7 +57,7 @@ class QMPYRester(object):
 
         if filter_args != []:
             filters_tag = ' AND '.join(filter_args)
-            url_args.append('filters='+filters_tag)
+            url_args.append('filter='+filters_tag)
             
         if verbose:
             print("Your filters are:")
@@ -75,7 +75,61 @@ class QMPYRester(object):
         _url = '&'.join(url_args)
         self.suburl = _url
 
-        return self._make_requests('/formationenergy?%s'%_url)
+        return self._make_requests('/oqmdapi/formationenergy?%s'%_url)
+
+    def get_optimade_structures(self, verbose=True, **kwargs):
+        """
+        Input:
+            verbose: boolean
+            **kwargs: dict
+        Output:
+            dict
+        """
+
+        # URL paramters
+        url_args = []
+        kwargs_list = ['limit', 'offset', 'filter']
+
+        # Attributes for filters
+        filter_args = []
+        filter_list = ['elements', 'nelements',
+                       'chemical_formula', 'formula_prototype', 
+                       '_oqmd_volume', '_oqmd_spacegroup',
+                       '_oqmd_natoms', '_oqmd_prototype', 
+                       '_oqmd_stability', '_oqmd_delta_e', 
+                       '_oqmd_band_gap']
+
+        for k in kwargs.keys():
+            if k in kwargs_list:
+                url_args.append('%s=%s' %(k, kwargs[k]))
+            elif k in filter_list:
+                if '>' in kwargs[k] or '<' in kwargs[k]:
+                    filter_args.append('%s%s' %(k, kwargs[k]))
+                else:
+                    filter_args.append('%s=%s' %(k, kwargs[k]))
+
+
+        if filter_args != []:
+            filters_tag = ' AND '.join(filter_args)
+            url_args.append('filter='+filters_tag)
+            
+        if verbose:
+            print("Your filters are:")
+            if url_args == []:
+                print("   No filters?")
+            else:
+                for arg in url_args:
+                    print("   ", arg)
+
+            ans = input('Proceed? [Y/n]:')
+
+            if ans not in ['Y', 'y', 'Yes', 'yes']:
+                return
+
+        _url = '&'.join(url_args)
+        self.suburl = _url
+
+        return self._make_requests('/optimade/structures?%s'%_url)
 
     def get_entries(self, verbose=True, all_data=False, **kwargs):
         """
@@ -133,10 +187,10 @@ class QMPYRester(object):
             output['next'] = next_page
             return output
             
-        return self._make_requests('/entry?%s'%_url)
+        return self._make_requests('/oqmdapi/entry?%s'%_url)
 
     def get_entry_by_id(self, entry_id):
-        return self._make_requests('/entry/%d'%entry_id)
+        return self._make_requests('/oqmdapi/entry/%d'%entry_id)
 
     def get_calculations(self, verbose=True, all_data=False, **kwargs):
         """
@@ -181,7 +235,7 @@ class QMPYRester(object):
         _url = '&'.join(url_args)
 
         if all_data == True:
-            output = self._make_requests('/calculation?%s'%_url)
+            output = self._make_requests('/oqmdapi/calculation?%s'%_url)
             next_page = output['next']
             while next_page:
                 tmp = self._make_requests(next_page.replace(self.preamble, ''))
@@ -190,7 +244,7 @@ class QMPYRester(object):
             output['next'] = next_page
             return output
 
-        return self._make_requests('/calculation?%s'%_url)
+        return self._make_requests('/oqmdapi/calculation?%s'%_url)
 
     def get_calculation_by_id(self, calc_id):
-        return self._make_requests('/calculation/%d'%calc_id)
+        return self._make_requests('/oqmdapi/calculation/%d'%calc_id)

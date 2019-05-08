@@ -54,7 +54,8 @@ with qr.QMPYRester() as q:
 - `chemical_formula`: compostion of the materials, e.g. Al2O3
 - `formula_prototype`: chemical formula abstract, e.g. AB, AB2
 - `_oqmd_natoms`: number of atoms in the supercell, e.g. 2, >5
-- `spacegroup`: the space group of the structure, e.g. Fm-3m
+- `_oqmd_volume`: volume of the supercell, e.g. >10
+- `_oqmd_spacegroup`: the space group of the structure, e.g. Fm-3m
 - `_oqmd_prototype`: structure prototype of that compound, e.g. Cu, CsCl
 - `_oqmd_stability`: hull distance of the compound, e.g. 0, <-0.1,
 - `_oqmd_delta_e`: formation energy of that compound, e.g. <-0.5,

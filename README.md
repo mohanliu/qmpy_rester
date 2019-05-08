@@ -31,7 +31,7 @@ with qr.QMPYRester() as q:
 - `stability`: hull distance of the compound, e.g. 0, <-0.1,
 - `delta_e`: formation energy of that compound, e.g. <-0.5,
 - `band_gap`: band gap of the materials, e.g. 0, >2
-- `filters`: customized filters, e.g. 'element_set=O AND ( stability<-0.1 OR delta_e<-0.5 )'
+- `filter`: customized filters, e.g. 'element_set=O AND ( stability<-0.1 OR delta_e<-0.5 )'
 - `limit`: number of data return at once
 - `offset`: the offset of data return
 

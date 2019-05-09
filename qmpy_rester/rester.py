@@ -53,7 +53,11 @@ class QMPYRester(object):
                     filter_args.append('%s%s' %(k, kwargs[k]))
                 else:
                     filter_args.append('%s=%s' %(k, kwargs[k]))
-
+            elif k == 'fields':
+                if '!' in kwargs[k]:
+                    url_args.append('fields!=%s' %kwargs[k].replace('!',''))
+                else:
+                    url_args.append('fields=%s' %kwargs[k])
 
         if filter_args != []:
             filters_tag = ' AND '.join(filter_args)
@@ -76,6 +80,16 @@ class QMPYRester(object):
         self.suburl = _url
 
         return self._make_requests('/oqmdapi/formationenergy?%s'%_url)
+
+    def get_oqmd_phase_by_id(self, fe_id, fields=None):
+        if fields:
+            if '!' in fields:
+                ex_fields = fields.replace('!', '')
+                return self._make_requests('/oqmdapi/formationenergy/%d?fields!=%s'%(fe_id, ex_fields))
+            else:
+                return self._make_requests('/oqmdapi/formationenergy/%d?fields=%s'%(fe_id, fields))
+
+        return self._make_requests('/oqmdapi/formationenergy/%d'%fe_id)
 
     def get_optimade_structures(self, verbose=True, **kwargs):
         """
@@ -107,6 +121,11 @@ class QMPYRester(object):
                     filter_args.append('%s%s' %(k, kwargs[k]))
                 else:
                     filter_args.append('%s=%s' %(k, kwargs[k]))
+            elif k == 'fields':
+                if '!' in kwargs[k]:
+                    url_args.append('fields!=%s' %kwargs[k].replace('!',''))
+                else:
+                    url_args.append('fields=%s' %kwargs[k])
 
 
         if filter_args != []:
@@ -130,6 +149,16 @@ class QMPYRester(object):
         self.suburl = _url
 
         return self._make_requests('/optimade/structures?%s'%_url)
+
+    def get_optimade_structure_by_id(self, op_id, fields=None):
+        if fields:
+            if '!' in fields:
+                ex_fields = fields.replace('!', '')
+                return self._make_requests('/optimade/structures/%d?fields!=%s'%(fe_id, ex_fields))
+            else:
+                return self._make_requests('/optimade/structures/%d?fields=%s'%(fe_id, fields))
+
+        return self._make_requests('/optimade/structures/%d'%fe_id)
 
     def get_entries(self, verbose=True, all_data=False, **kwargs):
         """

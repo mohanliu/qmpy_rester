@@ -150,15 +150,15 @@ class QMPYRester(object):
 
         return self._make_requests('/optimade/structures?%s'%_url)
 
-    def get_optimade_structure_by_id(self, op_id, fields=None):
+    def get_optimade_structure_by_id(self, id, fields=None):
         if fields:
             if '!' in fields:
                 ex_fields = fields.replace('!', '')
-                return self._make_requests('/optimade/structures/%d?fields!=%s'%(fe_id, ex_fields))
+                return self._make_requests('/optimade/structures/%d?fields!=%s'%(id, ex_fields))
             else:
-                return self._make_requests('/optimade/structures/%d?fields=%s'%(fe_id, fields))
+                return self._make_requests('/optimade/structures/%d?fields=%s'%(id, fields))
 
-        return self._make_requests('/optimade/structures/%d'%fe_id)
+        return self._make_requests('/optimade/structures/%d'%id)
 
     def get_entries(self, verbose=True, all_data=False, **kwargs):
         """

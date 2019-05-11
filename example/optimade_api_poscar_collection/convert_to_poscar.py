@@ -40,7 +40,10 @@ def poscar_conversion(query_file):
         data = json.load(j)
     
     for d in data:
-        write_poscar(d, 'poscars/POSCAR_'+str(d['_oqmd_entry_id']))
+        try:
+            write_poscar(d, 'poscars/POSCAR_'+str(d['_oqmd_entry_id']))
+        except:
+            print('Failed to convert to POSCAR for entry %d'%(d['_oqmd_entry_id']))
 
 if __name__ == "__main__":
     files = glob.glob('query_files/query_*.json')

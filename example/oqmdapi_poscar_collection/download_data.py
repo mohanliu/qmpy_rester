@@ -3,7 +3,7 @@ import json
 import time
 import os
 
-PAGE_LIMIT = 2000
+PAGE_LIMIT = 20
 
 if not os.path.exists('query_files'):
     os.mkdir('query_files')
@@ -13,7 +13,7 @@ def download_by_batch(batch_num):
     with qr.QMPYRester() as q:
         kwargs = {'limit':PAGE_LIMIT, 
                   'offset': batch_num*PAGE_LIMIT,
-                  'element_set': 'O',
+                  'element_set': 'He',
                   'icsd': 'T',
                   'fields':'entry_id,icsd_id,unit_cell,sites',
                   }

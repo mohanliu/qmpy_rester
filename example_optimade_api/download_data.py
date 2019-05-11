@@ -18,6 +18,9 @@ def download_by_batch(batch_num):
                   }
         data = q.get_optimade_structures(verbose=False, **kwargs)
     t2 = time.time()
+
+    if batch_num == 0:
+        print('Size of query dataset is %d.'%data['meta']['data_available'])
     
     with open('query_files/query_'+str(batch_num)+'.json', 'w') as json_file:
         json.dump(data['data'], json_file, indent=2)

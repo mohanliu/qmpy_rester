@@ -7,7 +7,7 @@ A python code to query OQMD data through oqmd-api ([PyPI](https://pypi.org/proje
 ## Usage
 ### 1. Get data through omqd-api
 #### 1.1 Example 
-```
+```python
 import qmpy_rester as qr
 
 ## Return list of data
@@ -43,7 +43,7 @@ with qr.QMPYRester() as q:
 
 ### 2. Get data through optimade api format
 #### 2.1 Example 
-```
+```python
 import qmpy_rester as qr
 
 ## Return list of data

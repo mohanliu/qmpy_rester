@@ -1,8 +1,11 @@
 import json
 import requests
+import os
+
+Rester_ENDPOINT = os.environ.get('oqmd_url', 'http://oqmd.org')
 
 class QMPYRester(object):
-    def __init__(self, endpoint='http://larue.northwestern.edu:9000'):
+    def __init__(self, endpoint=Rester_ENDPOINT):
         self.preamble = endpoint
         self.session = requests.Session()
 

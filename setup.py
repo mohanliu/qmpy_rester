@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setup(name="qmpy_rester",
       version='0.1.10',
-      description="A python code to query OQMD data through oqmd-api",
+      description="A python wrapper for OQMD API",
       url="https://github.com/mohanliu/qmpy_rester",
       author="Mohan Liu",
       author_email="mohan@u.northwestern.edu",

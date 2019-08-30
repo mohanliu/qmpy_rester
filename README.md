@@ -1,5 +1,5 @@
 # qmpy_rester  [ ![Build Status](https://travis-ci.org/mohanliu/qmpy_rester.svg?branch=master) ](https://travis-ci.org/mohanliu/qmpy_rester)
-A python code to query OQMD data through oqmd-api ([PyPI](https://pypi.org/project/qmpy-rester/)). This code is written in python 3.
+A python wrapper for OQMD API ([PyPI](https://pypi.org/project/qmpy-rester/)). This code is written in python 3.
 
 ## Installation
 `pip install qmpy_rester`

@@ -4,7 +4,7 @@ with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(name="qmpy_rester",
-      version='0.1.10',
+      version='0.1.11',
       description="A python wrapper for OQMD API",
       url="https://github.com/mohanliu/qmpy_rester",
       author="Mohan Liu",
@@ -17,5 +17,3 @@ setup(name="qmpy_rester",
       tests_require=['nose'],
       install_requires=["requests"],
       )
-
-    

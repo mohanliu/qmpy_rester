@@ -98,6 +98,18 @@ class PhaseData(object):
                           per_atom=per_atom)
             self.add_phase(phase)
 
+    def get_phase_data(self, space):
+        if not space:
+            return self
+
+        phases = set(self.phases)
+        others = set(self.phases_by_elt.keys()) - set(space)
+        for elt in others:
+            phases -= self.phases_by_elt[elt]
+        pd = PhaseData()
+        pd.phases = phases
+        return pd
+
 class Phase(object):
     """
     A Phase object is a point in composition-energy space.

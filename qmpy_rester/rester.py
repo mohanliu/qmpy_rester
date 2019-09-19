@@ -84,7 +84,7 @@ class QMPYRester(object):
 
         return self._make_requests('/oqmdapi/formationenergy?%s'%_url)
 
-    def get_oqmd_phase_space(self, space, verbose=True, **kwargs):
+    def get_oqmd_phase_space(self, space, **kwargs):
         """
         Input:
             space: str

@@ -24,3 +24,21 @@ class TestRester(TestCase):
         with qr.QMPYRester() as q:
             data = q.get_optimade_structure_by_id(id=4061139,fields='id,chemical_formula')
         self.assertEqual(data, {'id': 4061139, 'chemical_formula':'Cs1Ho1S4Si1'})
+
+class TestPhaseDiagram(TestCase):
+    def test_phase_diagram_creation(self):
+        d = qr.PhaseDiagram('Pd-O')
+        d.get_phase_data()
+
+        self.assertTrue(isinstance(d.tie_lines, list))
+        for t in d.tie_lines:
+            self.assertTrue(isinstance(t[0], qr.Phase))
+            self.assertTrue(isinstance(t[1], qr.Phase))
+
+        self.assertTrue(isinstance(d.stable, set))
+        for p in d.stable:
+            self.assertTrue(isinstance(p, qr.Phase))
+
+        self.assertTrue(isinstance(d.unstable, list))
+        for p in d.unstable:
+            self.assertTrue(isinstance(p, qr.Phase))

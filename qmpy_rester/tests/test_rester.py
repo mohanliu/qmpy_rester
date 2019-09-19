@@ -9,6 +9,11 @@ class TestRester(TestCase):
             data = q.get_oqmd_phases(verbose=False, **kwargs)
         self.assertTrue(isinstance(data, dict))
 
+    def test_rester_oqmdapi_phase_space_output_dict(self):
+        with qr.QMPYRester() as q:
+            data = q.get_oqmd_phase_space('Pd-O')
+        self.assertTrue(isinstance(data, dict))
+
     def test_rester_optimade_output_dict(self):
         with qr.QMPYRester() as q:
             kwargs = {'limit': '1'}

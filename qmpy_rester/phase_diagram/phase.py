@@ -88,12 +88,13 @@ class PhaseData(object):
 
     def read_api_data(self, jsondata, per_atom=True):
         if jsondata.get('data', []) == []:
+            print("No data found")
             return
         for d in jsondata['data']:
-            if d.get('name', None) or d.get('delta_e', None):
+            if 'name' not in d or 'delta_e' not in d:
                 continue
-            phase = Phase(composition=d.get('name'),
-                          energy=float(d.get('delta_e')),
+            phase = Phase(composition=d['name'],
+                          energy=float(d['delta_e']),
                           per_atom=per_atom)
             self.add_phase(phase)
 

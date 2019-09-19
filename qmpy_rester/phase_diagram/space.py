@@ -1,24 +1,10 @@
-# qmpy/analysis/thermodynamics/space.py
-
-import networkx as nx
+#import networkx as nx
 from scipy.spatial import ConvexHull
 import matplotlib.pylab as plt
-import logging
 
-from django.db import transaction
-
-import qmpy
-from qmpy.utils import *
-import phase
-from reaction import Reaction
-from equilibrium import Equilibrium
-
-logger = logging.getLogger(__name__)
-
-if qmpy.FOUND_PULP:
-    import pulp
-else:
-    logger.warn('Cannot import PuLP, cannot do GCLP')
+from .phase import *
+from .equilibrium import Equilibrium
+from ..utils import *
 
 class PhaseSpaceError(Exception):
     pass
@@ -99,7 +85,7 @@ class PhaseSpace(object):
         self.set_mus(mus)
         self.set_bounds(bounds)
         if data is None:
-            self.data = phase.PhaseData()
+            self.data = PhaseData()
             if bounds:
                 self.load(**kwargs)
         else:
@@ -150,41 +136,12 @@ class PhaseSpace(object):
         self.mus = {}
         if mus is None:
             return
-        elif isinstance(mus, basestring):
+        elif isinstance(mus, str):
             mus = mus.replace(',', ' ')
             for mu in mus.split():
                 self.mus.update(parse_mu(mu))
         elif isinstance(mus, dict):
             self.mus = mus
-
-    def load(self, **kwargs):
-        """
-        Loads oqmd data into the associated PhaseData object.
-        """
-        target = kwargs.get('load', 'oqmd')
-        if not target:
-            return
-
-        stable = kwargs.get('stable', False)
-        fit = kwargs.get('fit', 'standard')
-        total = kwargs.get('total', (fit is None))
-        if target == 'oqmd':
-            self.data.load_oqmd(self.space, fit=fit, 
-                    stable=stable, total=total)
-        elif 'legacy' in target:
-            self.data.load_library('legacy.dat')
-        elif target == 'icsd':
-            self.data.load_oqmd(self.space, fit=fit,
-                    search={'entry__path__contains':'icsd'},
-                    stable=stable, total=total_energy)
-        elif target == 'prototypes':
-            self.data.load_oqmd(space=self.space, fit=fit,
-                    search={'path__contains':'prototypes'},
-                    stable=stable, total=total_energy)
-        elif target == None:
-            pass
-        else:
-            raise ValueError("Unknown load argument: %s" % target)
 
     def get_subspace(self, space):
         data = self.data.get_phase_data(space)
@@ -202,7 +159,7 @@ class PhaseSpace(object):
     @phases.setter
     def phases(self, phases):
         self.clear_all()
-        self.data = phase.PhaseData()
+        self.data = PhaseData()
         self.data.phases = phases
 
     _phase_dict = None
@@ -218,7 +175,7 @@ class PhaseSpace(object):
     @phase_dict.setter
     def phase_dict(self, phase_dict):
         self.clear_all()
-        self.data = phase.PhaseData()
+        self.data = PhaseData()
         self.data.phases = phase_dict.values()
 
     def phase_energy(self, p):
@@ -262,9 +219,6 @@ class PhaseSpace(object):
         self.clear_data()
         self.clear_analysis()
 
-    def load_tie_lines(self):
-        raise NotImplementedError
-
     @property
     def comp_dimension(self):
         """
@@ -281,27 +235,6 @@ class PhaseSpace(object):
 
         """
         return len(self.bounds) - 1
-
-    @property
-    def chempot_dimension(self):
-        """
-        Chemical potential dimension.
-
-        Examples::
-
-            >>> s = PhaseSpace('Fe-Li', 'O=-2.5')
-            >>> s.chempot_dimension
-            0
-            >>> s = PhaseSpace('Fe-Li', 'N=0:-5')
-            >>> s.chempot_dimension
-            1
-            >>> s = PhaseSpace('Fe-Li', 'N=0:-5 F=0:-5')
-            >>> s.chempot_dimension
-            2
-
-        """
-        cpdims = [ k for k,v in self.mus.items() if isinstance(v, list) ]
-        return len(cpdims)
 
     @property
     def shape(self):
@@ -390,9 +323,9 @@ class PhaseSpace(object):
             array([ 0.25,  0.75])
 
         """
-        if isinstance(composition, phase.Phase):
+        if isinstance(composition, Phase):
             composition = composition.comp
-        elif isinstance(composition, basestring):
+        elif isinstance(composition, str):
             composition = parse_comp(composition)
 
         composition = defaultdict(float, composition)
@@ -479,7 +412,6 @@ class PhaseSpace(object):
         set, and no set is a subset of any other.
         """
         if self._dual_spaces is None:
-            #self._dual_spaces = self.get_dual_spaces()
             self._dual_spaces = self.heap_structure_spaces()
         return self._dual_spaces
 
@@ -535,7 +467,6 @@ class PhaseSpace(object):
         """
         if self._stable is None:
             self.hull
-            #self.compute_hull()
         return self._stable
 
     @property
@@ -545,7 +476,6 @@ class PhaseSpace(object):
         """
         if self._stable is None:
             self.hull
-            #self.compute_hull()
         return [ p for p in self.phases if
             ( not p in self.stable ) and self.in_space(p) ]
 
@@ -557,7 +487,6 @@ class PhaseSpace(object):
         """
         if self._tie_lines is None:
             self.hull
-            #self.compute_hull()
         return [ list(tl) for tl in self._tie_lines ]
 
     @property
@@ -612,71 +541,6 @@ class PhaseSpace(object):
         self._cliques = nx.find_cliques(self.graph)
         return self._cliques
 
-    def cliques_to_hull(self, cliques):
-        raise NotImplementedError
-
-    def stability_range(self, p, element=None):
-        """
-        Calculate the range of phase `p` with respect to `element`.
-        """
-        if element is None and len(self.mus) == 1:
-            element = self.mus.keys()[0]
-        tcomp = dict(p.unit_comp)
-        e, c = self.gclp(tcomp, mus=None)
-        tcomp[element] = tcomp.get(element, 0) + 0.001
-        edo, xdo = self.gclp(tcomp, mus=None)
-        tcomp[element] -= 0.001
-        if element in p.comp.keys():
-            tcomp[element] -= 0.001
-            eup, xup = self.gclp(tcomp, mus=None)
-            return (edo-e)/0.001, (e-eup)/0.001
-        else:
-            return (edo-e)/0.001, -20
-
-    def chempot_bounds(self, composition, total=False):
-        energy, phases = self.gclp(composition)
-        chems = {}
-        for eq in self.hull_list:
-            if not phases in eq:
-                continue
-            pots = eq.chemical_potentials
-            if total:
-                for k in pots:
-                    pots[k] += qmpy.chem_pots['standard']['elements'][k]
-            chems[eq] = pots
-        return chems
-
-    def chempot_range(self, p, element=None):
-        pot_bounds = {}
-        tcomp = dict(p.unit_comp)
-        e, c = self.gclp(tcomp, mus=None)
-        for elt in p.comp.keys():
-            tcomp = dict(p.unit_comp)
-            tcomp[elt] -= 0.001
-            eup, xup = self.gclp(tcomp)
-            tcomp[elt] += 0.002
-            edo, xdo = self.gclp(tcomp)
-            pot_bounds[elt] = [ (edo-e)/0.001, (e-eup)/0.001 ]
-        return pot_bounds
-
-    def get_tie_lines_by_gclp(self, iterable=False):
-        """
-        Runs over pairs of Phases and tests for equilibrium by GCLP. Not
-        recommended, it is very slow.
-
-        """
-        tie_lines=[]
-        self.get_gclp_stable()
-
-        for k1, k2 in itertools.combinations(self.stable, 2):
-            testpoint = (self.coord(k1.unit_comp) + self.coord(k2.unit_comp))/2
-            energy, phases = self.gclp(self.comp(testpoint))
-            if abs(energy - (k1.energy + k2.energy)/2) < 1e-8:
-                tie_lines.append([k1,k2])
-                if iterable:
-                    yield [k1, k2]
-        self._tie_lines = tie_lines
-
     def in_space(self, composition):
         """
         Returns True, if the composition is in the right elemental-space 
@@ -694,9 +558,9 @@ class PhaseSpace(object):
 
         if self.bounds is None:
             return True
-        if isinstance(composition, phase.Phase):
+        if isinstance(composition, Phase):
             composition = composition.comp
-        elif isinstance(composition, basestring):
+        elif isinstance(composition, str):
             composition = parse_comp(composition)
 
         if set(composition.keys()) <= self.space:
@@ -719,9 +583,9 @@ class PhaseSpace(object):
         """
         if self.bounds is None:
             return True
-        if isinstance(composition, phase.Phase):
+        if isinstance(composition, Phase):
             composition = composition.unit_comp
-        elif isinstance(composition, basestring):
+        elif isinstance(composition, str):
             composition = parse_comp(composition)
 
         if not self.in_space(composition):
@@ -822,281 +686,6 @@ class PhaseSpace(object):
         self._stable = stable
         return hull
 
-    def get_chempot_qhull(self):
-        faces = list(self.hull)
-        A = []
-        for face in faces:
-            A.append([face.chem_pots[e] for e in self.elements])
-        A = np.array(A)
-
-        conv_hull = ConvexHull(A)
-
-        uhull = set()
-        for facet in conv_hull.simplices:
-            face = frozenset([ faces[i] for i in facet 
-                if i < len(faces) ])
-            uhull.add(face)
-
-        return uhull
-
-    def get_hull_points(self):
-        """
-        Gets out-of PhaseSpace points. i.e. for FeSi2-Li, there are no other
-        phases in the space, but there are combinations of Li-Si phases and
-        Fe-Si phases. This method returns a list of phases including composite
-        phases from out of the space.
-
-        Examples::
-            
-            >>> space = PhaseSpace('FeSi2-Li')
-            >>> space.get_hull_points()
-            [<Phase FeSi2 (23408): -0.45110217625>,
-            <Phase Li (104737): 0>,
-            <Phase 0.680 Li13Si4 + 0.320 FeSi : -0.3370691816>,
-            <Phase 0.647 Li8Si3 + 0.353 FeSi : -0.355992801765>,
-            <Phase 0.133 Fe3Si + 0.867 Li21Si5 : -0.239436904167>,
-            <Phase 0.278 FeSi + 0.722 Li21Si5 : -0.306877209723>]
-
-        """
-        self._hull = set() # set of lists
-        self._stable = set() # set
-        done_list = [] # list of sorted lists
-        hull_points = [] # list of phases
-
-        if len(self.phases) == len(self.space):
-            self._hull = set(frozenset(self.phases))
-            self._stable = set(self.phases)
-            return
-
-        for b in self.bounds:
-            e, x = self.gclp(b)
-            p = phase.Phase.from_phases(x)
-            hull_points.append(p)
-
-        facets = [list(hull_points)]
-        while facets:
-            facet = facets.pop(0)
-            done_list.append(sorted(facet))
-            try:
-                phases, E = self.get_minima(self.phase_dict.values(), facet)
-            except:
-                continue
-            p = phase.Phase.from_phases(phases)
-            if p in self.phases:
-                p = self.phase_dict[p.name]
-            if not p in hull_points:
-                hull_points.append(p)
-                for new_facet in itertools.combinations(facet, r=len(facet)-1):
-                    new_facet = list(new_facet) + [p]
-                    if new_facet not in done_list:
-                        facets.append(new_facet)
-        return hull_points
-
-    def gclp(self, composition={}, mus={}, phases=[]):
-        """
-        Returns energy, phase composition which is stable at given composition
-
-        Examples::
-
-            >>> space = PhaseSpace('Fe-Li-O')
-            >>> energy, phases = space.gclp('FeLiO2')
-            >>> print phases
-            >>> print energy
-
-        """
-        if not composition:
-            return 0.0, {}
-
-        if isinstance(composition, basestring):
-            composition = parse_comp(composition)
-            
-        if not phases:
-            phases = [ p for p in self.phase_dict.values() if p.use ]
-
-        _mus = self.mus
-        if mus is None:
-            _mus = {}
-        else:
-            _mus.update(mus)
-
-        in_phases = []
-        space = set(composition.keys()) | set(_mus)
-        for p in phases:
-            if p.energy is None:
-                continue
-            #if self.in_bounds(p):
-            if not set(p.comp.keys()) <= space:
-                continue
-            in_phases.append(p)
-        ##[vh]
-        ##print "in_phases: ", in_phases
-
-        return self._gclp(composition=composition,
-                mus=_mus, phases=in_phases)
-
-    def _gclp(self, composition={}, mus={}, phases=[]):
-        if not qmpy.FOUND_PULP:
-            raise Exception('Cannot do GCLP without installing PuLP and an LP',
-                    'solver')
-        prob = pulp.LpProblem('GibbsEnergyMin', pulp.LpMinimize)
-        phase_vars = pulp.LpVariable.dicts('lib', phases, 0.0)
-        prob += pulp.lpSum([ (p.energy -
-            sum([ p.unit_comp.get(elt,0)*mu
-                for elt, mu in mus.items() ])) * phase_vars[p]
-            for p in phases]),\
-                    "Free Energy"
-        for elt, constraint in composition.items():
-            prob += pulp.lpSum([
-                p.unit_comp.get(elt,0)*phase_vars[p]
-                for p in phases ]) == float(constraint),\
-                        'Conservation of '+elt
-        ##[vh]
-        ##print prob
-        if pulp.GUROBI().available():
-            prob.solve(pulp.GUROBI(msg=False))
-        elif pulp.COIN_CMD().available():
-            prob.solve(pulp.COIN_CMD())
-        else:
-            prob.solve()
-
-        phase_comp = dict([ (p, phase_vars[p].varValue)
-            for p in phases if phase_vars[p].varValue > 1e-5])
-        
-        energy = sum( p.energy*amt for p, amt in phase_comp.items() )
-        energy -= sum([ a*composition.get(e, 0) for e,a in mus.items()])
-        return energy, phase_comp
-
-    def get_minima(self, phases, bounds):
-        """
-        Given a set of Phases, get_minima will determine the minimum
-        free energy elemental composition as a weighted sum of these
-        compounds
-        """
-
-        prob = pulp.LpProblem('GibbsEnergyMin', pulp.LpMinimize)
-        pvars = pulp.LpVariable.dicts('phase', phases, 0)
-        bvars = pulp.LpVariable.dicts('bound', bounds, 0.0, 1.0)
-        prob += pulp.lpSum( self.phase_energy(p)*pvars[p] for p in phases ) - \
-                pulp.lpSum( self.phase_energy(bound)*bvars[bound] for bound in bounds ), \
-                                "Free Energy"
-        for elt in self.bound_space:
-            prob += sum([ p.unit_comp.get(elt,0)*pvars[p] for p in phases ])\
-                        == \
-                sum([ b.unit_comp.get(elt, 0)*bvars[b] for b in bounds ]),\
-                            'Contraint to the proper range of'+elt
-        prob += sum([ bvars[b] for b in bounds ]) == 1, \
-                'sum of bounds must be 1'
-
-        if pulp.GUROBI().available():
-            prob.solve(pulp.GUROBI(msg=False))
-        elif pulp.COIN_CMD().available():
-            prob.solve(pulp.COIN_CMD())
-        elif pulp.COINMP_DLL().available():
-            prob.solve(pulp.COINMP_DLL())
-        else:
-            prob.solve()
-
-        E = pulp.value(prob.objective)
-        xsoln = defaultdict(float,
-            [(p, pvars[p].varValue) for p in phases if
-                abs(pvars[p].varValue) > 1e-4])
-        return xsoln, E
-
-    def compute_hull(self):
-        phases = [ p for p in self.phase_dict.values() if (
-            self.phase_energy(p) < 0 and len(p.space) > 1 ) ]
-        region = Region([self.phase_dict[elt] for elt in self.space ])
-        region.contained = phases
-
-    def compute_stability(self, p):
-        """
-        Compute the energy difference between the formation energy of a Phase,
-        and the energy of the convex hull in the absence of that phase. 
-        """
-        #if self.phase_dict[p.name] != p:
-        #    stable = self.phase_dict[p.name]
-        #    p.stability = p.energy - stable.energy
-        if len(p.comp) == 1:
-            stable = self.phase_dict[p.name]
-            p.stability = p.energy - stable.energy
-        else:
-            phases = list(self.phase_dict.values())
-            #try:
-            phases.remove(p)
-            #except ValueError:
-            #    pass
-            energy, gclp_phases = self.gclp(p.unit_comp, phases=phases)
-            ##print p, energy, gclp_phases
-            #vh
-            #print p,  '------', gclp_phases
-            p.stability = p.energy - energy
-            #vh
-            return energy, gclp_phases
-
-    @transaction.atomic
-    def compute_stabilities(self, phases=None, save=False, reevaluate=True):
-        """
-        Calculate the stability for every Phase.
-
-        Keyword Arguments:
-            phases:
-                List of Phases. If None, uses every Phase in PhaseSpace.phases
-
-            save:
-                If True, save the value for stability to the database. 
-
-            new_only:
-                If True, only compute the stability for Phases which did not
-                import a stability from the OQMD. False by default.
-        """
-        from qmpy.analysis.vasp.calculation import Calculation
-        if phases is None:
-            phases = self.phases
-
-        if reevaluate:
-            for p in self.phases:
-                p.stability = None
-
-        for p in phases:
-            if p.stability is None:
-                if p in self.phase_dict.values():
-                    self.compute_stability(p)
-                else:
-                    p2 = self.phase_dict[p.name]
-                    if p2.stability is None:
-                        self.compute_stability(p2)
-                    base = max(0, p2.stability)
-                    diff = p.energy - p2.energy
-                    p.stability = base + diff
-
-            if save:
-                qs = qmpy.FormationEnergy.objects.filter(id=p.id)
-                qs.update(stability=p.stability)
-
-    def save_tie_lines(self):
-        """
-        Save all tie lines in this PhaseSpace to the OQMD. Stored in
-        Formation.equilibrium
-        """
-        for p1, p2 in self.tie_lines:
-            p1.formation.equilibrium.add(p2.formation)
-
-    def compute_formation_energies(self):
-        """
-        Evaluates the formation energy of every phase with respect to the
-        chemical potentials in the PhaseSpace.
-        """
-        ref = []
-        for b in self.bounds:
-            if format_comp(b) in self.mus:
-                ref.append(self.mus[format_comp[b]])
-            else:
-                ref.append(self.gclp(b)[0])
-        ref = np.array(ref)
-
-        for p in self.phases:
-            p.energy = p.energy - sum(self.coord(p) * ref)
-
     renderer = None
     @property
     def phase_diagram(self, **kwargs):
@@ -1113,62 +702,6 @@ class PhaseSpace(object):
                 neighbors.append([eq1, eq2])
         return neighbors
 
-    def find_reaction_mus(self, element=None):
-        """
-        Find the chemical potentials of a specified element at which reactions
-        occur. 
-
-        Examples::
-
-            >>> s = PhaseSpace('Fe-Li-O')
-            >>> s.find_reaction_mus('O')
-
-        """
-        if element is None and len(self.mus) == 1:
-            element = self.mus.keys()[0]
-        ps = PhaseSpace('-'.join(self.space), data=self.data)
-        chem_pots = set()
-        for p in ps.stable:
-            chem_pots |= set(self.stability_range(p, element))
-        return sorted(chem_pots)
-
-    def chempot_scan(self, element=None, umin=None, umax=None):
-        """
-        Scan through chemical potentials of `element` from `umin` to `umax`
-        identifing values at which phase transformations occur.
-
-        """
-        if element is None and len(self.mus) == 1:
-            element = self.mus.keys()[0]
-        mus = self.find_reaction_mus(element=element)
-        if umin is None:
-            umin = min(mus)
-        if umax is None:
-            umax = max(mus)
-
-        windows = {}
-        hulls = []
-        mus = sorted(mus)
-        for i in range(len(mus)):
-            mu = mus[i]
-            if mu < umin or mu > umax:
-                continue
-
-            if i == 0:
-                nu = mu - 1
-                window = (None, mu)
-            elif i == len(mus) - 1:
-                nu = mu + 1
-                window = (mu, None)
-            else:
-                nu = np.average([mu, mus[i+1]])
-                window = (mu, mus[i+1])
-
-            self.mus[element] = nu
-            self.get_hull()
-            windows[window] = list(self.stable)
-        return windows
-
     def get_phase_diagram(self, **kwargs):
         """
         Creates a Renderer attribute with appropriate phase diagram components.
@@ -1181,151 +714,20 @@ class PhaseSpace(object):
 
         """
         self.renderer = Renderer()
-        if self.shape == (0,0):
-            self.make_as_unary(**kwargs)
-        elif self.shape == (1,0):
+        if self.shape == (1,0):
             self.make_as_binary(**kwargs)
         elif self.shape == (2,0):
             self.make_as_ternary(**kwargs)
         elif self.shape == (3,0):
             self.make_as_quaternary(**kwargs)
-        elif self.shape == (0,1):
-            self.make_1d_vs_chempot(**kwargs)
-        elif self.shape == (1,1):
-            self.make_vs_chempot(**kwargs)
-        else:
+        elif self.shape[0] > 3:
             ps = PhaseSpace('-'.join(self.space), data=self.data,
                     load=None)
             ps.renderer = Renderer()
             ps.make_as_graph(**kwargs)
             self.renderer = ps.renderer
-
-    def make_as_unary(self, **kwargs):
-        """
-        Plot of phase volume vs formation energy.
-
-        Examples::
-            
-            >>> s = PhaseSpace('Fe2O3')
-            >>> r = s.make_as_unary()
-            >>> r.plot_in_matplotlib()
-            >>> plt.show()
-
-        """
-        bottom, gclp = self.gclp(self.bounds[0])
-        bottom /= sum(self.bounds[0].values())
-        gs = phase.Phase.from_phases(gclp)
-        points = []
-        for p in self.phases:
-            if not self.in_bounds(p):
-                continue
-            if not p.calculation:
-                continue
-            v = p.calculation.volume_pa
-            pt = Point([v, self.phase_energy(p)-bottom], label=p.label)
-            points.append(pt)
-            #self.renderer.text.append(Text(pt, p.calculation.entry_id))
-        pc = PointCollection(points, color='red')
-        self.renderer.add(pc)
-        pt = Point([gs.volume, 0], label=gs.label, color='green')
-        self.renderer.add(pt)
-
-        xaxis = Axis('x', label='Volume', units="&#8491;<sup>3</sup>/atom")
-        yaxis = Axis('y', label='Relative Energy', units='eV/atom')
-        self.renderer.xaxis = xaxis
-        self.renderer.yaxis = yaxis
-        self.renderer.options['grid']['hoverable'] = True
-        self.renderer.options['tooltip'] = True
-
-    def make_1d_vs_chempot(self, **kwargs):
-        """ 
-        Plot of phase stability vs chemical potential for a single composition.
-
-        Examples::
-            
-            >>> s = PhaseSpace('Fe', mus={'O':[0,-4]})
-            >>> r = s.make_vs_chempot()
-            >>> r.plot_in_matplotlib()
-            >>> plt.show()
-
-        """
-        self.make_vs_chempot(**kwargs)
-        self.renderer.xaxis.min = 0.5
-        self.renderer.xaxis.max = 1.5
-        self.renderer.xaxis.options['show'] = False
-
-    def make_vs_chempot(self, **kwargs):
-        """
-        Plot of phase stability vs chemical potential for a range of
-        compositions.
-
-        Examples::
-            
-            >>> s = PhaseSpace('Fe-Li', mus={'O':[0,-4]})
-            >>> r = s.make_vs_chempot()
-            >>> r.plot_in_matplotlib()
-            >>> plt.show()
-
-        """
-        xaxis = Axis('x')
-        xaxis.min, xaxis.max = (0, 1)
-        xaxis.label = '-'.join([format_comp(b) for b in self.bounds])
-        elt = self.mus.keys()[0]
-        yaxis = Axis('y', label='&Delta;&mu;<sub>'+elt+'</sub>', units='eV/atom')
-        murange = self.mus.values()[0]
-        yaxis.min = min(murange)
-        yaxis.max = max(murange)
-        self.renderer.xaxis = xaxis
-        self.renderer.yaxis= yaxis
-
-        if False:
-            points = []
-            for window, hull in self.chempot_scan().items():
-                hull = sorted(hull, key=lambda x: self.coord(x)[0])
-                for i in range(len(hull)-1):
-                    p1 = hull[i]
-                    p2 = hull[i+1]
-                    x1 = self.coord(p1)[0]
-                    x2 = self.coord(p2)[0]
-                    line = Line([Point([x1, window[0], window[1]]),
-                                 Point([x2, window[0], window[1]])],
-                                 fill=True)
-                    self.renderer.add(line)
-
-        ps = PhaseSpace('-'.join(self.space), data=self.data, load=None)
-        points = set()
-        lines = []
-        hlines = set()
-        for p in ps.stable:
-            if not self.in_bounds(p):
-                continue
-            bot, top = ps.stability_range(p, elt)
-            x = self.coord(p)[0]
-            line = Line([Point([x, bot]), Point([x, top])], color='blue')
-            lines.append(line)
-            hlines |= set([bot, top])
-            points.add(Point([x, bot]))
-            points.add(Point([x, top]))
-
-            y = np.average([bot, top])
-            if y < min(murange):
-                y = min(murange)
-            elif y > max(murange):
-                y = max(murange)
-            t = Text([x, y], '<b>%s</b>' % p.name)
-            self.renderer.add(t)
-
-        pc = PointCollection(list(points), color='green')
-
-        for h in hlines:
-            self.renderer.add(Line([[0,h], [1,h]], color='grey'))
-
-        for l in lines:
-            self.renderer.add(l)
-
-        self.renderer.add(pc)
-
-        self.renderer.options['grid']['hoverable'] = True
+        else:
+            raise NotImplementedError
             
     def make_as_binary(self, **kwargs):
         """
@@ -1477,16 +879,6 @@ class PhaseSpace(object):
         self.renderer.add(PointCollection(points, 
                                           color='red', label='Unstable'))
 
-        ## Older codes:
-        #for p in self.unstable:
-        #    if not self.in_bounds(p):
-        #        continue
-        #    pt = Point(coord_to_gtet(self.coord(p)), label=p.name)
-        #    points.append(pt)
-        #self.renderer.add(PointCollection(points, 
-        #                                  color='red', label='Unstable'))
-        ### Mohan >
-
         points = []
         for p in self.stable:
             if not self.in_bounds(p):
@@ -1533,170 +925,3 @@ class PhaseSpace(object):
         self.renderer.options['grid']['borderWidth'] = 0
         self.renderer.options['grid']['show'] = False
         self.renderer.options['tooltip'] = True
-
-    def stability_window(self, composition, **kwargs):
-        self.renderer = Renderer()
-        chem_pots = self.chempot_bounds(composition)
-        for eq, pots in chem_pots.items():
-            pt = Point(coord_to_point([ pots[k] for k in self.elements ]))
-            self.renderer.add(pt)
-
-    def get_reaction(self, var, facet=None):
-        """
-        For a given composition, what is the maximum delta_composition reaction
-        on the given facet. If None, returns the whole reaction for the given
-        PhaseSpace.
-
-        Examples::
-
-            >>> space = PhaseSpace('Fe2O3-Li2O')
-            >>> equilibria = space.hull[0]
-            >>> space.get_reaction('Li2O', facet=equilibria)
-
-        """
-
-        if isinstance(var, basestring):
-            var = parse_comp(var)
-
-        if facet:
-            phases = facet
-        else:
-            phases = self.stable
-
-        prob = pulp.LpProblem('BalanceReaction', pulp.LpMaximize)
-        pvars = pulp.LpVariable.dicts('prod', phases, 0)
-        rvars = pulp.LpVariable.dicts('react', phases, 0)
-        prob += sum([ p.fraction(var)['var']*pvars[p] for p in phases ])-\
-                sum([ p.fraction(var)['var']*rvars[p] for p in phases ]),\
-                "Maximize delta comp"
-        for celt in self.space:
-            prob += sum([ p.fraction(var)[celt]*pvars[p] for p in phases ]) ==\
-                    sum([ p.fraction(var)[celt]*rvars[p] for p in phases ]),\
-                    'identical %s composition on both sides' % celt
-        prob += sum([ rvars[p] for p in phases ]) == 1
-        
-        if pulp.GUROBI().available():
-            prob.solve(pulp.GUROBI(msg=False))
-        elif pulp.COIN_CMD().available():
-            prob.solve(pulp.COIN_CMD())
-        elif pulp.COINMP_DLL().available():
-            prob.solve(pulp.COINMP_DLL())
-        else:
-            prob.solve()
-
-        prods = defaultdict(float,[ (c, pvars[c].varValue) for c in phases
-            if pvars[c].varValue > 1e-4 ])
-        reacts = defaultdict(float,[ (c, rvars[c].varValue) for c in phases
-            if rvars[c].varValue > 1e-4 ])
-        n_elt = pulp.value(prob.objective)
-        return reacts, prods, n_elt
-
-    def get_reactions(self, var, electrons=1.0):
-        """
-        Returns a list of Reactions.
-
-        Examples::
-
-            >>> space = PhaseSpace('Fe-Li-O')
-            >>> space.get_reactions('Li', electrons=1)
-
-        """
-        if isinstance(var, basestring):
-            var = parse_comp(var)
-        vname = format_comp(reduce_comp(var))
-        vphase = self.phase_dict[vname]
-        vpd = dict( (self.phase_dict[k], v) for k,v in var.items() )
-        for facet in self.hull:
-            reacts, prods, delta_var = self.get_reaction(var, facet=facet)
-            if vphase in facet:
-                yield Reaction(
-                    products={vphase:sum(vphase.comp.values())}, 
-                    reactants={}, delta_var=1.0,
-                    electrons=electrons, variable=var)
-                continue
-            elif delta_var < 1e-6:
-                pass
-            yield Reaction(products=prods, reactants=reacts, 
-                delta_var=delta_var,
-                variable=var, electrons=electrons)
-
-    def plot_reactions(self, var, electrons=1.0, save=False):
-        """
-        Plot the convex hull along the reaction path, as well as the voltage
-        profile.
-        """
-        if isinstance(var, basestring):
-            var = parse_comp(var)
-        vname = format_comp(var)
-
-        fig = plt.figure()
-        ax1 = fig.add_subplot(211)
-
-        #plot tie lines
-        for p1, p2 in self.tie_lines:
-            c1 = p1.fraction(var)['var']
-            c2 = p2.fraction(var)['var']
-            if abs(c1) < 1e-4 or abs(c2) < 1e-4:
-                if abs(c1 - 1) < 1e-4 or abs(c2 - 1) < 1e-4:
-                    if len(self.tie_lines) > 1:
-                        continue
-            ax1.plot([c1,c2], [self.phase_energy(p1),
-                               self.phase_energy(p2)], 'k')
-
-        #plot compounds
-        for p in self.stable:
-            x = p.fraction(var)['var']
-            ax1.plot(x, self.phase_energy(p), 'bo')
-            ax1.text(x, self.phase_energy(p), '$\\rm{%s}$' % p.latex,
-                            ha='left', va='top')
-        plt.ylabel('$\\rm{\Delta H}$ $\\rm{[eV/atom]}$')
-        ymin, ymax = ax1.get_ylim()
-        ax1.set_ylim(ymin - 0.1, ymax)
-
-        ax2 = fig.add_subplot(212, sharex=ax1)
-        points = set()
-        for reaction in self.get_reactions(var, electrons=electrons):
-            if reaction.delta_var == 0:
-                continue
-            voltage = reaction.delta_h/reaction.delta_var/electrons
-            x1 = reaction.r_var_comp
-            x2 = reaction.p_var_comp
-            points |= set([(x1, voltage), 
-                    (x2, voltage)])
-
-        points = sorted( points, key=lambda x: x[0] )
-        points = sorted( points, key=lambda x: -x[1] )
-        #!v
-        #print points
-
-        base = sorted(self.stable, key=lambda x:
-                x.amt(var)['var'])[0]
-
-        max_x = max([ k[0] for k in points ])
-
-        if len(points) > 1:
-            for i in range(len(points) - 2):
-                ax2.plot([points[i][0], points[i+1][0]],
-                        [points[i][1], points[i+1][1]], 'k')
-
-            ax2.plot([points[-2][0], points[-2][0]], 
-                    [points[-2][1], points[-1][1]], 'k')
-            ax2.plot([points[-2][0], max_x], 
-                    [points[-1][1], points[-1][1]], 'k')
-        else:
-            ax2.plot([0, max_x], [points[0][1], points[0][1]], 'k')
-        
-        plt.xlabel('$\\rm{x}$ $\\rm{in}$ $\\rm{(%s)_{x}(%s)_{1-x}}$' % ( 
-           format_latex(var),
-            base.latex))
-        plt.ylabel('$\\rm{Voltage}$ $\\rm{[V]}$')
-
-        return ax1, ax2
-
-        #if not save:
-        #    plt.show()
-        #else:
-        #    plt.savefig('%s-%s.eps' % (save, vname),
-        #            bbox_inches='tight', 
-        #            transparent=True,
-        #            pad_inches=0) 

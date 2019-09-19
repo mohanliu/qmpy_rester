@@ -90,10 +90,8 @@ class PhaseData(object):
         if jsondata.get('data', []) == []:
             return
         for d in jsondata['data']:
-            #if d.get('name', None) or d.get('delta_e', None):
-            #    continue
-            print(d)
-            print(d.get('name'))
+            if d.get('name', None) or d.get('delta_e', None):
+                continue
             phase = Phase(composition=d.get('name'),
                           energy=float(d.get('delta_e')),
                           per_atom=per_atom)

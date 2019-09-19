@@ -15,5 +15,12 @@ setup(name="qmpy_rester",
       long_description_content_type='text/markdown',
       test_suite='nose.collector',
       tests_require=['nose'],
-      install_requires=["requests"],
+      install_requires=[
+          "requests",
+          "matplotlib",
+          "networkx",
+          "numpy",
+          "scipy",
+          "PyYAML",
+          ],
       )

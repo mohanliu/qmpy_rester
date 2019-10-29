@@ -1,5 +1,5 @@
 # qmpy_rester  [ ![Build Status](https://travis-ci.org/mohanliu/qmpy_rester.svg?branch=master) ](https://travis-ci.org/mohanliu/qmpy_rester)
-A python wrapper for OQMD API ([PyPI](https://pypi.org/project/qmpy-rester/)). This code is written in python 3.
+A python wrapper for OQMD API ([PyPI](https://pypi.org/project/qmpy-rester/)). This code requires a python version >=3.6.
 
 ## Installation
 `pip install qmpy-rester`

@@ -51,7 +51,7 @@ with qr.QMPYRester() as q:
     kwargs = {
         ‘elements’: ‘Fe,Mn’,                    # include element Fe and Mn
         ‘nelements’: ‘<5’,                      # less than 4 element species in the compound
-        ‘_oqmd_stability’: ‘<0’,                # stability calculted by oqmd is less than 0
+        ‘_oqmd_stability’: ‘<0.5’,                # stability calculted by oqmd is less than 0
         }
     list_of_data = q.get_optimade_structures(**kwargs)
 

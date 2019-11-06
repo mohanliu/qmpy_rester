@@ -7,4 +7,4 @@ install:
 script:
     python setup.py test
 env:
-    oqmd_url=http://oqmd.org:8080
+    oqmd_url=http://oqmd.org

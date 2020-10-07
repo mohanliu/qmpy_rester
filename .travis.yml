@@ -1,7 +1,5 @@
 language: python
 python:
-    - "3.4"
-    - "3.5"
     - "3.6"
     - "3.7"
 install:
@@ -9,4 +7,4 @@ install:
 script:
     python setup.py test
 env:
-    oqmd_url=http://amglab.ms.northwestern.edu:8000
+    oqmd_url=http://oqmd.org

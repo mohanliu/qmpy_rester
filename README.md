@@ -1,8 +1,8 @@
 # qmpy_rester  [ ![Build Status](https://travis-ci.org/mohanliu/qmpy_rester.svg?branch=master) ](https://travis-ci.org/mohanliu/qmpy_rester)
-A python wrapper for OQMD API ([PyPI](https://pypi.org/project/qmpy-rester/)). This code is written in python 3.
+A python wrapper for OQMD API ([PyPI](https://pypi.org/project/qmpy-rester/)). This code requires a python version >=3.6.
 
 ## Installation
-`pip install qmpy_rester`
+`pip install qmpy-rester`
 
 ## Usage
 ### 1. Get data through omqd-api
@@ -14,7 +14,7 @@ import qmpy_rester as qr
 with qr.QMPYRester() as q:
     kwargs = {
         ‘element_set’: ‘(Fe-Mn),O’,      # composition include (Fe OR Mn) AND O
-        ‘stability’: ‘<-0.1’,            # hull distance smaller than -0.1 eV
+        ‘stability’: ‘0’,            # hull distance smaller than -0.1 eV
         ‘natom’: ‘<10’,                  # number of atoms less than 10
         }
     list_of_data = q.get_oqmd_phases(**kwargs)
@@ -51,7 +51,7 @@ with qr.QMPYRester() as q:
     kwargs = {
         ‘elements’: ‘Fe,Mn’,                    # include element Fe and Mn
         ‘nelements’: ‘<5’,                      # less than 4 element species in the compound
-        ‘_oqmd_stability’: ‘<0’,                # stability calculted by oqmd is less than 0
+        ‘_oqmd_stability’: ‘<0.5’,                # stability calculted by oqmd is less than 0
         }
     list_of_data = q.get_optimade_structures(**kwargs)
 

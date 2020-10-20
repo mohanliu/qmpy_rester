@@ -13,9 +13,9 @@ import qmpy_rester as qr
 ## Return list of data
 with qr.QMPYRester() as q:
     kwargs = {
-        ‘element_set’: ‘(Fe-Mn),O’,      # composition include (Fe OR Mn) AND O
-        ‘stability’: ‘0’,            # hull distance smaller than -0.1 eV
-        ‘natom’: ‘<10’,                  # number of atoms less than 10
+        "element_set": "(Fe-Mn),O",      # composition include (Fe OR Mn) AND O
+        "stability": "0",            # hull distance smaller than -0.1 eV
+        "natom": "<10",                  # number of atoms less than 10
         }
     list_of_data = q.get_oqmd_phases(**kwargs)
 
@@ -49,9 +49,9 @@ import qmpy_rester as qr
 ## Return list of data
 with qr.QMPYRester() as q:
     kwargs = {
-        ‘elements’: ‘Fe,Mn’,                    # include element Fe and Mn
-        ‘nelements’: ‘<5’,                      # less than 4 element species in the compound
-        ‘_oqmd_stability’: ‘<0.5’,                # stability calculted by oqmd is less than 0
+        "elements": "Fe,Mn",                    # include element Fe and Mn
+        "nelements": "<5",                      # less than 4 element species in the compound
+        "_oqmd_stability": "<0.5",                # stability calculted by oqmd is less than 0
         }
     list_of_data = q.get_optimade_structures(**kwargs)
 

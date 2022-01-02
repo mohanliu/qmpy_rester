@@ -1,6 +1,7 @@
 from .rester import *
 from .phase_diagram import *
 
+
 class PhaseDiagram(object):
     def __init__(self, space):
         self.space = space
@@ -8,7 +9,7 @@ class PhaseDiagram(object):
     def get_phase_data(self):
         with QMPYRester() as q:
             ps_data = q.get_oqmd_phase_space(self.space)
-    
+
         pd = PhaseData()
         pd.read_api_data(ps_data)
 
@@ -30,7 +31,7 @@ class PhaseDiagram(object):
     @property
     def tie_lines(self):
         return self.phasespace.tie_lines
-    
+
     @property
     def stable(self):
         return self.phasespace.stable
@@ -38,4 +39,3 @@ class PhaseDiagram(object):
     @property
     def unstable(self):
         return self.phasespace.unstable
-
